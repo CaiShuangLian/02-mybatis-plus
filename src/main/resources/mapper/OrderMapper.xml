@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.mp.demo.mapper.OrderMapper">
+
+    <!-- 通用查询映射结果 -->
+    <resultMap id="BaseResultMap" type="com.mp.demo.data.entity.Order">
+        <id column="id" property="id" />
+        <result column="open_date" property="openDate" />
+        <result column="time" property="time" />
+        <result column="phone" property="phone" />
+        <result column="room_id" property="roomId" />
+        <result column="tag" property="tag" />
+        <result column="status" property="status" />
+        <result column="linkman" property="linkman" />
+        <result column="price" property="price" />
+        <result column="order_equipment_id" property="orderEquipmentId" />
+        <result column="start_time" property="startTime" />
+        <result column="end_time" property="endTime" />
+        <result column="appoint_day" property="appointDay" />
+        <result column="version" property="version" />
+    </resultMap>
+
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        id, open_date, time, phone, room_id, tag, status, linkman, price, order_equipment_id, start_time, end_time, appoint_day
+    </sql>
+
+    <select id="check" resultType="java.lang.Boolean">
+        SELECT
+            COUNT(1)
+        FROM
+            `order` LEFT JION `room` ON `order`.room_id=`room`.id
+        WHERE
+            `order`.room_id = #{id}
+            AND `order`.`status`=2
+            AND `order`.appoint_day = #{appointDay}
+            AND (( `order`.end_time &gt;= #{startTime} AND `order`.end_time &lt;= #{endTime} )
+                OR ( `order`.start_time &gt;= #{startTime} AND `order`.start_time &lt;= #{endTime} )
+                OR ( `order`.start_time &lt;= #{startTime} AND `order`.end_time &gt;= #{endTime} ))
+            AND `room`.start_time &lt;= #{startTime}
+            AND `room`.end_time &gt;= #{endTime}
+    </select>
+
+    <insert id="addOne">
+        INSERT INTO `order` ( room_id, appoint_day, start_time, end_time ,phone,`status`)
+        VALUES (#{id},#{appointDay},#{startTime},#{endTime},#{phone},4)
+    </insert>
+
+    <update id="cancel">
+        UPDATE `order`
+        <set>
+            `order`.status=0
+        </set>
+        where `order`.phone=#{phone}
+        AND (`order`.`status`= 2 or `order`.`status`=4)
+        AND `order`.id in
+        <foreach collection="ids" item="ids" index="ids" separator="," open="(" close=")">
+            #{ids}
+        </foreach>
+    </update>
+
+</mapper>

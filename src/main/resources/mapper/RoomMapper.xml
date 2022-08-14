@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.mp.demo.mapper.RoomMapper">
+
+    <!-- 通用查询映射结果 -->
+    <resultMap id="BaseResultMap" type="com.mp.demo.data.entity.Room">
+        <id column="id" property="id"/>
+        <result column="room_name" property="roomName"/>
+        <result column="room_address" property="roomAddress"/>
+        <result column="room_equipment" property="roomEquipment"/>
+        <result column="room_use" property="roomUse"/>
+        <result column="room_description" property="roomDescription"/>
+        <result column="room_photo" property="roomPhoto"/>
+        <result column="status" property="status"/>
+        <result column="longitude" property="longitude"/>
+        <result column="latitude" property="latitude"/>
+        <result column="company_name" property="companyName"/>
+        <result column="square" property="square"/>
+        <result column="num" property="num"/>
+        <result column="roomcode" property="roomcode"/>
+        <result column="worktime" property="worktime"/>
+        <result column="price" property="price"/>
+        <result column="free_time" property="freeTime"/>
+        <result column="start_time" property="startTime"/>
+        <result column="end_time" property="endTime"/>
+        <result column="version" property="version"/>
+    </resultMap>
+
+    <!--    RoomDTO-->
+    <resultMap id="RoomDTO" type="com.mp.demo.data.dto.RoomDTO">
+        <result column="id" property="id"/>
+        <result column="room_name" property="roomName"/>
+        <result column="price" property="price"/>
+        <result column="roomTime" property="roomTime"/>
+        <result column="appointTime" property="appointTime"/>
+    </resultMap>
+
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        id, room_name, room_address, room_equipment, room_use, room_description, room_photo, status, longitude, latitude, company_name, square, num, roomcode, worktime, price, free_time
+    </sql>
+
+    <select id="getList" resultMap="RoomDTO">
+        <bind name="pattern" value="'%' + _parameter.getKeyword + '%'" />
+        SELECT
+            room.id,
+            room.room_name,
+            room.price,
+            CONCAT(
+            DATE_FORMAT( room.start_time, '%H:%i' ),
+            '-',
+            DATE_FORMAT( room.end_time, '%H:%i' )) AS roomTime,
+            GROUP_CONCAT(
+            DATE_FORMAT( o.start_time, '%H:%i' ),
+            '-',
+            DATE_FORMAT( o.end_time, '%H:%i' )) AS appointTime
+        FROM
+            room
+        LEFT JOIN ( SELECT * FROM `order` WHERE `order`.appoint_day = #{appointDay} ) o ON room.id = o.room_id
+        <where>
+            <if test="keyword!=null and keyword!=''">
+                and
+                (room_name like #{pattern}
+                or room_address like concat ('%',#{keyword},'%')
+                or room_description like concat ('%',#{keyword},'%')
+                or company_name like concat ('%',#{keyword},'%'))
+            </if>
+            <if test="price!=null">
+                and room.price &lt;= #{price}
+            </if>
+        </where>
+        GROUP BY
+            room.id
+        ORDER BY
+            o.start_time
+    </select>
+
+    <insert id="batchInsert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO room (room_name, price, start_time, end_time) VALUES
+        <foreach item="roomVos" collection="list" separator=",">
+            (#{roomVos.roomName}, #{roomVos.price}, #{roomVos.startTime}, #{roomVos.endTime})
+        </foreach>
+    </insert>
+
+    <update id="batchUpdate">
+        UPDATE room
+        <set>
+            <trim prefix="room.room_name=case" suffix="end,">
+                <foreach collection="list" item="roomVos" index="index">
+                    <if test="roomVos.roomName !=null">
+                        when room.id=#{roomVos.id} then #{roomVos.roomName}
+                    </if>
+                </foreach>
+            </trim>
+
+            <trim prefix="room.price=case" suffix="end,">
+                <foreach collection="list" item="roomVos" index="index">
+                    <if test="roomVos.price !=null">
+                        when room.id=#{roomVos.id} then #{roomVos.price}
+                    </if>
+                </foreach>
+            </trim>
+
+            <trim prefix="room.start_time=case" suffix="end,">
+                <foreach collection="list" item="roomVos" index="index">
+                    <if test="roomVos.startTime !=null">
+                        when room.id=#{roomVos.id} then #{roomVos.startTime}
+                    </if>
+                </foreach>
+            </trim>
+
+            <trim prefix="room.end_time=case" suffix="end,">
+                <foreach collection="list" item="roomVos" index="index">
+                    <if test="roomVos.endTime !=null">
+                        when room.id=#{roomVos.id} then #{roomVos.endTime}
+                    </if>
+                </foreach>
+            </trim>
+        </set>
+
+        where room.id in
+        <foreach collection="list" item="roomVos" index="index" separator="," open="(" close=")">
+            #{roomVos.id}
+        </foreach>
+    </update>
+
+    <delete id="batchDelete">
+        DELETE FROM room
+        where room.id in
+        <foreach collection="list" item="ids" index="index" separator="," open="(" close=")">
+            #{ids}
+        </foreach>
+    </delete>
+
+</mapper>
